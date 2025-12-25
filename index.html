@@ -2,19 +2,53 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Mini FPS estilo Bloodstrike</title>
+<title>Mini FPS móvil</title>
 <style>
-  body { margin: 0; overflow: hidden; }
+  body { margin: 0; overflow: hidden; touch-action: none; }
   canvas { display: block; }
-  #info {
-    position: absolute; top: 10px; left: 10px;
-    color: white; font-family: sans-serif;
-    background: rgba(0,0,0,0.5); padding: 5px;
+
+  /* Joystick izquierdo */
+  #joystick {
+    position: fixed;
+    bottom: 50px;
+    left: 50px;
+    width: 100px;
+    height: 100px;
+    background: rgba(200,200,200,0.5);
+    border-radius: 50%;
+  }
+  #stick {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background: rgba(100,100,100,0.8);
+    border-radius: 50%;
+    top: 25px;
+    left: 25px;
+  }
+
+  /* Botón disparo */
+  #shoot {
+    position: fixed;
+    bottom: 50px;
+    right: 50px;
+    width: 80px;
+    height: 80px;
+    background: rgba(255,0,0,0.7);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
   }
 </style>
 </head>
 <body>
-<div id="info">Usa WASD para moverte, mouse para mirar, clic izquierdo para disparar</div>
+
+<div id="joystick"><div id="stick"></div></div>
+<div id="shoot">FIRE</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
 
@@ -61,83 +95,73 @@
   enemy.position.set(5,0.75,0);
   scene.add(enemy);
 
-  // --- Movimiento FPS ---
-  const keys = { w:false, a:false, s:false, d:false };
-  let velocity = new THREE.Vector3();
+  // --- Movimiento ---
+  let moveX = 0;
+  let moveZ = 0;
   const speed = 0.1;
 
-  document.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = true; });
-  document.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
+  const joystick = document.getElementById('joystick');
+  const stick = document.getElementById('stick');
+  let dragging = false;
+  let startX, startY;
 
-  // --- Mouse para mirar ---
-  let yaw = 0, pitch = 0;
-  let prevX, prevY;
-  let isPointerLocked = false;
-
-  document.body.addEventListener('click', () => {
-    document.body.requestPointerLock();
+  joystick.addEventListener('pointerdown', e => {
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
   });
 
-  document.addEventListener('pointerlockchange', () => {
-    isPointerLocked = document.pointerLockElement === document.body;
+  window.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    let dx = e.clientX - startX;
+    let dy = e.clientY - startY;
+
+    const max = 40;
+    dx = Math.max(-max, Math.min(max, dx));
+    dy = Math.max(-max, Math.min(max, dy));
+
+    stick.style.transform = `translate(${dx}px, ${dy}px)`;
+
+    moveX = dx / max;
+    moveZ = -dy / max;
   });
 
-  document.addEventListener('mousemove', e => {
-    if(!isPointerLocked) return;
-    yaw -= e.movementX * 0.002;
-    pitch -= e.movementY * 0.002;
-    pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+  window.addEventListener('pointerup', e => {
+    dragging = false;
+    stick.style.transform = `translate(0px,0px)`;
+    moveX = 0;
+    moveZ = 0;
   });
 
-  // --- Disparos ---
-  document.addEventListener('mousedown', e => {
-    if(e.button === 0) shoot();
-  });
-
-  function shoot() {
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
+  // --- Disparo ---
+  document.getElementById('shoot').addEventListener('pointerdown', () => {
+    const dir = new THREE.Vector3(0,0,-1); // disparo hacia adelante
+    dir.applyEuler(camera.rotation);
     const raycaster = new THREE.Raycaster(camera.position, dir);
     const intersects = raycaster.intersectObject(enemy);
-    if(intersects.length > 0) {
-      console.log("¡Enemigo alcanzado!");
-      enemy.material.color.set(0xff0000);
-    }
-  }
+    if(intersects.length>0) enemy.material.color.set(0xff0000);
+  });
 
   // --- Animación ---
-  function animate() {
+  function animate(){
     requestAnimationFrame(animate);
 
-    // Movimiento
-    velocity.set(0,0,0);
-    if(keys.w) velocity.z -= speed;
-    if(keys.s) velocity.z += speed;
-    if(keys.a) velocity.x -= speed;
-    if(keys.d) velocity.x += speed;
+    // Movimiento personaje
+    personaje.position.x += moveX * speed;
+    personaje.position.z += moveZ * speed;
 
-    // Rotar personaje según cámara
-    const forward = new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
-    const right = new THREE.Vector3(Math.sin(yaw + Math.PI/2),0,Math.cos(yaw + Math.PI/2));
-    personaje.position.add(forward.clone().multiplyScalar(velocity.z));
-    personaje.position.add(right.clone().multiplyScalar(velocity.x));
-
-    // Cámara sigue al personaje
+    // Cámara detrás del personaje
     camera.position.set(
       personaje.position.x,
       personaje.position.y + 1.0,
-      personaje.position.z
+      personaje.position.z + 5
     );
-
-    // Rotar cámara
-    camera.rotation.set(pitch, yaw, 0);
+    camera.lookAt(personaje.position.x, personaje.position.y + 1, personaje.position.z);
 
     renderer.render(scene, camera);
   }
-
   animate();
 
-  // --- Ajuste de ventana ---
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth/window.innerHeight;
     camera.updateProjectionMatrix();
