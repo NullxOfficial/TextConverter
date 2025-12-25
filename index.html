@@ -2,75 +2,136 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Personaje 3D Visible</title>
+<title>Personaje 3D con Joystick</title>
 <style>
   body { margin: 0; overflow: hidden; }
   canvas { display: block; }
+
+  /* Estilo joystick */
+  #joystick {
+    position: fixed;
+    bottom: 50px;
+    left: 50px;
+    width: 100px;
+    height: 100px;
+    background: rgba(200,200,200,0.5);
+    border-radius: 50%;
+    touch-action: none;
+  }
+
+  #stick {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background: rgba(100,100,100,0.8);
+    border-radius: 50%;
+    top: 25px;
+    left: 25px;
+  }
 </style>
 </head>
 <body>
+
+<div id="joystick">
+  <div id="stick"></div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
 
 <script>
-  // Escena y cámara
+  // --- Escena y cámara ---
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87ceeb); // cielo azul
+  scene.background = new THREE.Color(0x87ceeb);
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 100);
   camera.position.set(0, 5, 10);
 
-  // Renderizador
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  // Luz
+  // --- Luz ---
   const light = new THREE.DirectionalLight(0xffffff, 1);
   light.position.set(10, 10, 10);
   scene.add(light);
-  const ambientLight = new THREE.AmbientLight(0x404040);
-  scene.add(ambientLight);
+  scene.add(new THREE.AmbientLight(0x404040));
 
-  // Piso
+  // --- Piso ---
   const floorGeo = new THREE.PlaneGeometry(50, 50);
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x228B22 });
   const floor = new THREE.Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI/2;
   scene.add(floor);
 
-  // --- Crear personaje simple ---
+  // --- Personaje simple ---
   const personaje = new THREE.Group();
-
-  // Cuerpo
-  const bodyGeo = new THREE.BoxGeometry(1, 2, 0.5);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 2, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0xff0000 })
+  );
   body.position.y = 1;
-  personaje.add(body);
-
-  // Cabeza
-  const headGeo = new THREE.SphereGeometry(0.5, 32, 32);
-  const headMat = new THREE.MeshStandardMaterial({ color: 0xffff00 });
-  const head = new THREE.Mesh(headGeo, headMat);
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 32, 32),
+    new THREE.MeshStandardMaterial({ color: 0xffff00 })
+  );
   head.position.y = 2.75;
+  personaje.add(body);
   personaje.add(head);
-
   scene.add(personaje);
 
-  // Animación simple (rotación)
+  // --- Movimiento ---
+  let moveX = 0;
+  let moveZ = 0;
+  const speed = 0.1;
+
   function animate() {
     requestAnimationFrame(animate);
-    personaje.rotation.y += 0.01;
+    personaje.position.x += moveX * speed;
+    personaje.position.z += moveZ * speed;
     renderer.render(scene, camera);
   }
-
   animate();
 
-  // Ajustar tamaño al cambiar ventana
+  // --- Joystick ---
+  const joystick = document.getElementById('joystick');
+  const stick = document.getElementById('stick');
+  let dragging = false;
+  let startX, startY;
+
+  joystick.addEventListener('pointerdown', e => {
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+  });
+
+  window.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    let dx = e.clientX - startX;
+    let dy = e.clientY - startY;
+
+    // Limitar stick dentro del joystick
+    const max = 40;
+    dx = Math.max(-max, Math.min(max, dx));
+    dy = Math.max(-max, Math.min(max, dy));
+    stick.style.transform = `translate(${dx}px, ${dy}px)`;
+
+    moveX = dx / max;
+    moveZ = -dy / max;
+  });
+
+  window.addEventListener('pointerup', e => {
+    dragging = false;
+    stick.style.transform = `translate(0px,0px)`;
+    moveX = 0;
+    moveZ = 0;
+  });
+
+  // --- Ajuste de ventana ---
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth/window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 </script>
+
 </body>
 </html>
