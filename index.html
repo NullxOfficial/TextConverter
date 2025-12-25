@@ -2,39 +2,19 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Personaje 3D con Joystick</title>
+<title>Mini FPS estilo Bloodstrike</title>
 <style>
   body { margin: 0; overflow: hidden; }
   canvas { display: block; }
-
-  /* Estilo joystick */
-  #joystick {
-    position: fixed;
-    bottom: 50px;
-    left: 50px;
-    width: 100px;
-    height: 100px;
-    background: rgba(200,200,200,0.5);
-    border-radius: 50%;
-    touch-action: none;
-  }
-
-  #stick {
-    position: absolute;
-    width: 50px;
-    height: 50px;
-    background: rgba(100,100,100,0.8);
-    border-radius: 50%;
-    top: 25px;
-    left: 25px;
+  #info {
+    position: absolute; top: 10px; left: 10px;
+    color: white; font-family: sans-serif;
+    background: rgba(0,0,0,0.5); padding: 5px;
   }
 </style>
 </head>
 <body>
-
-<div id="joystick">
-  <div id="stick"></div>
-</div>
+<div id="info">Usa WASD para moverte, mouse para mirar, clic izquierdo para disparar</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
 
@@ -42,8 +22,9 @@
   // --- Escena y cámara ---
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
+
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 100);
-  camera.position.set(0, 5, 10);
+  camera.position.set(0, 2, 5);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -51,79 +32,110 @@
 
   // --- Luz ---
   const light = new THREE.DirectionalLight(0xffffff, 1);
-  light.position.set(10, 10, 10);
+  light.position.set(10,10,10);
   scene.add(light);
   scene.add(new THREE.AmbientLight(0x404040));
 
   // --- Piso ---
-  const floorGeo = new THREE.PlaneGeometry(50, 50);
+  const floorGeo = new THREE.PlaneGeometry(50,50);
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x228B22 });
   const floor = new THREE.Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI/2;
   scene.add(floor);
 
-  // --- Personaje simple ---
+  // --- Personaje ---
   const personaje = new THREE.Group();
   const body = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 2, 0.5),
+    new THREE.BoxGeometry(0.5,1.5,0.5),
     new THREE.MeshStandardMaterial({ color: 0xff0000 })
   );
-  body.position.y = 1;
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5, 32, 32),
-    new THREE.MeshStandardMaterial({ color: 0xffff00 })
-  );
-  head.position.y = 2.75;
+  body.position.y = 0.75;
   personaje.add(body);
-  personaje.add(head);
   scene.add(personaje);
 
-  // --- Movimiento ---
-  let moveX = 0;
-  let moveZ = 0;
+  // --- Enemigo ---
+  const enemy = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5,1.5,0.5),
+    new THREE.MeshStandardMaterial({ color: 0x0000ff })
+  );
+  enemy.position.set(5,0.75,0);
+  scene.add(enemy);
+
+  // --- Movimiento FPS ---
+  const keys = { w:false, a:false, s:false, d:false };
+  let velocity = new THREE.Vector3();
   const speed = 0.1;
 
+  document.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = true; });
+  document.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
+
+  // --- Mouse para mirar ---
+  let yaw = 0, pitch = 0;
+  let prevX, prevY;
+  let isPointerLocked = false;
+
+  document.body.addEventListener('click', () => {
+    document.body.requestPointerLock();
+  });
+
+  document.addEventListener('pointerlockchange', () => {
+    isPointerLocked = document.pointerLockElement === document.body;
+  });
+
+  document.addEventListener('mousemove', e => {
+    if(!isPointerLocked) return;
+    yaw -= e.movementX * 0.002;
+    pitch -= e.movementY * 0.002;
+    pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+  });
+
+  // --- Disparos ---
+  document.addEventListener('mousedown', e => {
+    if(e.button === 0) shoot();
+  });
+
+  function shoot() {
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    const raycaster = new THREE.Raycaster(camera.position, dir);
+    const intersects = raycaster.intersectObject(enemy);
+    if(intersects.length > 0) {
+      console.log("¡Enemigo alcanzado!");
+      enemy.material.color.set(0xff0000);
+    }
+  }
+
+  // --- Animación ---
   function animate() {
     requestAnimationFrame(animate);
-    personaje.position.x += moveX * speed;
-    personaje.position.z += moveZ * speed;
+
+    // Movimiento
+    velocity.set(0,0,0);
+    if(keys.w) velocity.z -= speed;
+    if(keys.s) velocity.z += speed;
+    if(keys.a) velocity.x -= speed;
+    if(keys.d) velocity.x += speed;
+
+    // Rotar personaje según cámara
+    const forward = new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
+    const right = new THREE.Vector3(Math.sin(yaw + Math.PI/2),0,Math.cos(yaw + Math.PI/2));
+    personaje.position.add(forward.clone().multiplyScalar(velocity.z));
+    personaje.position.add(right.clone().multiplyScalar(velocity.x));
+
+    // Cámara sigue al personaje
+    camera.position.set(
+      personaje.position.x,
+      personaje.position.y + 1.0,
+      personaje.position.z
+    );
+
+    // Rotar cámara
+    camera.rotation.set(pitch, yaw, 0);
+
     renderer.render(scene, camera);
   }
+
   animate();
-
-  // --- Joystick ---
-  const joystick = document.getElementById('joystick');
-  const stick = document.getElementById('stick');
-  let dragging = false;
-  let startX, startY;
-
-  joystick.addEventListener('pointerdown', e => {
-    dragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-  });
-
-  window.addEventListener('pointermove', e => {
-    if (!dragging) return;
-    let dx = e.clientX - startX;
-    let dy = e.clientY - startY;
-
-    // Limitar stick dentro del joystick
-    const max = 40;
-    dx = Math.max(-max, Math.min(max, dx));
-    dy = Math.max(-max, Math.min(max, dy));
-    stick.style.transform = `translate(${dx}px, ${dy}px)`;
-
-    moveX = dx / max;
-    moveZ = -dy / max;
-  });
-
-  window.addEventListener('pointerup', e => {
-    dragging = false;
-    stick.style.transform = `translate(0px,0px)`;
-    moveX = 0;
-    moveZ = 0;
-  });
 
   // --- Ajuste de ventana ---
   window.addEventListener('resize', () => {
