@@ -2,19 +2,27 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Fondo Rojo Fluido con Partículas</title>
+<title>Partículas Rojas en Fondo Negro</title>
 <style>
-  body, html { margin: 0; padding: 0; overflow: hidden; background: black; }
-  canvas { display: block; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: black;
+  }
+  canvas {
+    display: block;
+  }
 </style>
 </head>
 <body>
+
 <canvas id="canvas"></canvas>
 
 <script>
-// Configuración
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
 let width, height;
 
 function resize() {
@@ -22,98 +30,54 @@ function resize() {
   height = canvas.height = window.innerHeight;
 }
 resize();
-window.addEventListener('resize', resize);
+window.addEventListener("resize", resize);
 
 // Partículas
 const particles = [];
-const particleCount = 150;
+const particleCount = 180;
 
 for (let i = 0; i < particleCount; i++) {
   particles.push({
     x: Math.random() * width,
     y: Math.random() * height,
-    vx: 0,
-    vy: 0,
-    radius: Math.random() * 3 + 1,
-    alpha: Math.random() * 0.8 + 0.2
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: (Math.random() - 0.5) * 0.5,
+    radius: Math.random() * 2 + 1,
+    alpha: Math.random() * 0.6 + 0.3
   });
 }
 
-// Animación de ondas y partículas
-let time = 0;
-
-function drawWaves() {
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+function drawParticles() {
+  // Fondo negro sólido
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.fillRect(0, 0, width, height);
 
-  const waveCount = 5;
-  for (let i = 0; i < waveCount; i++) {
-    const amplitude = 80 + i * 30;
-    const frequency = 0.008 - i * 0.001;
-    const speed = 0.5 + i * 0.2;
-    const offset = i * 100;
-
-    ctx.beginPath();
-    ctx.moveTo(0, height);
-
-    for (let x = 0; x <= width; x += 10) {
-      const y = height / 2 +
-        Math.sin((x + time * speed) * frequency) * amplitude +
-        Math.sin((x * 0.5 + time * speed * 1.5) * frequency * 1.5) * (amplitude / 2) +
-        offset;
-      ctx.lineTo(x, y);
-    }
-
-    ctx.lineTo(width, height);
-    ctx.closePath();
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, `rgba(255, 0, 0, ${0.4 - i * 0.05})`);
-    gradient.addColorStop(0.5, `rgba(200, 0, 0, ${0.6 - i * 0.06})`);
-    gradient.addColorStop(1, 'rgba(100, 0, 0, 0)');
-
-    ctx.fillStyle = gradient;
-    ctx.fill();
-  }
-}
-
-function drawParticles() {
   particles.forEach(p => {
-    // Campo de flujo basado en ondas
-    const waveY = height / 2 + Math.sin(p.x * 0.008 + time * 0.7) * 150;
-    const forceY = (waveY - p.y) * 0.0005;
-    const forceX = Math.cos(p.x * 0.008 + time * 0.5) * 0.3;
-
-    p.vx += forceX;
-    p.vy += forceY;
-    p.vx *= 0.95; // fricción
-    p.vy *= 0.95;
-
+    // Movimiento suave
     p.x += p.vx;
     p.y += p.vy;
 
-    // Rebote en bordes
+    // Rebote
     if (p.x < 0 || p.x > width) p.vx *= -1;
     if (p.y < 0 || p.y > height) p.vy *= -1;
 
-    // Dibujar partícula con glow
+    // Glow
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255, 50, 50, ${p.alpha})`;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#ff0000';
+    ctx.fillStyle = `rgba(255, 60, 60, ${p.alpha})`;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "#ff0000";
     ctx.fill();
   });
 }
 
 function animate() {
-  drawWaves();
   drawParticles();
-  time += 1;
   requestAnimationFrame(animate);
 }
 
 animate();
 </script>
+
 </body>
 </html>
