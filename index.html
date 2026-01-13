@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Particles</title>
 
 <style>
@@ -10,16 +11,12 @@ html, body {
     padding: 0;
     width: 100%;
     height: 100%;
-    background: black;
+    background: #000;
     overflow: hidden;
 }
 
 canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    display: block;
 }
 </style>
 </head>
@@ -31,26 +28,33 @@ canvas {
 const canvas = document.getElementById("particles");
 const ctx = canvas.getContext("2d");
 
+// 🔥 FIX ANDROID / DPI
+const dpr = window.devicePixelRatio || 1;
+
 function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + "px";
+    canvas.style.height = window.innerHeight + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
+
 resize();
 window.addEventListener("resize", resize);
 
 const particles = [];
-const TOTAL = 80;
+const TOTAL = 70;
 
 for (let i = 0; i < TOTAL; i++) {
     particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.7,
-        vy: (Math.random() - 0.5) * 0.7
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vx: (Math.random() - 0.5) * 0.6,
+        vy: (Math.random() - 0.5) * 0.6
     });
 }
 
-function animate() {
+function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     for (let i = 0; i < particles.length; i++) {
@@ -59,23 +63,23 @@ function animate() {
         p.x += p.vx;
         p.y += p.vy;
 
-        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        if (p.x < 0 || p.x > window.innerWidth) p.vx *= -1;
+        if (p.y < 0 || p.y > window.innerHeight) p.vy *= -1;
 
-        // punto
+        // 🔴 punto
         ctx.beginPath();
         ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = "red";
+        ctx.fillStyle = "#ff0000";
         ctx.fill();
 
-        // líneas
+        // 🔗 líneas
         for (let j = i + 1; j < particles.length; j++) {
             let p2 = particles[j];
             let dx = p.x - p2.x;
             let dy = p.y - p2.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < 120) {
+            if (dist < 130) {
                 ctx.strokeStyle = "rgba(255,0,0,0.25)";
                 ctx.lineWidth = 0.6;
                 ctx.beginPath();
@@ -86,10 +90,10 @@ function animate() {
         }
     }
 
-    requestAnimationFrame(animate);
+    requestAnimationFrame(draw);
 }
 
-animate();
+draw();
 </script>
 
 </body>
