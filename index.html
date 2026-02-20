@@ -1,108 +1,224 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Partículas Negras</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: white;
-      overflow: hidden;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NULLX STUDIO | Unicode Premium</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #000000;
+            --card: #0f0f0f;
+            --primary: #00ff9d;
+            --accent: #00d4ff;
+            --text: #ffffff;
+            --glow: rgba(0, 255, 157, 0.4);
+        }
 
-    canvas {
-      display: block;
-    }
-  </style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: radial-gradient(circle at 10% 20%, #001a0f, #000000);
+            color: var(--text);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 50px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(3rem, 10vw, 5.5rem);
+            font-weight: 900;
+            letter-spacing: -2px;
+            margin: 0;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, var(--primary), var(--accent), #ff00aa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 20px var(--glow));
+            line-height: 0.9;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 1rem;
+            margin-top: 15px;
+            letter-spacing: 4px;
+        }
+
+        .input-wrapper {
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 40px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            background: var(--card);
+            border: 3px solid #1a1a1a;
+            border-radius: 24px;
+            padding: 25px;
+            color: white;
+            font-size: 1.5rem;
+            resize: none;
+            outline: none;
+            transition: all 0.4s ease;
+            box-sizing: border-box;
+        }
+
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 40px rgba(0, 255, 157, 0.2);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1400px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid #222;
+            padding: 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            background: #161616;
+        }
+
+        .label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--primary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+            opacity: 0.8;
+        }
+
+        .output {
+            font-size: 1.5rem;
+            word-break: break-all;
+            line-height: 1.2;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 40px;
+            background: var(--primary);
+            color: #000;
+            padding: 15px 35px;
+            border-radius: 50px;
+            font-weight: bold;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0,255,157,0.4);
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
 <body>
 
-<canvas id="particles"></canvas>
+    <div class="header">
+        <h1>NULLX STUDIO</h1>
+        <p class="subtitle">UNICODE ENGINE v2.0</p>
+    </div>
 
-<script>
-  const canvas = document.getElementById("particles");
-  const ctx = canvas.getContext("2d");
+    <div class="input-wrapper">
+        <textarea id="mainInput" placeholder="Escribe aquí..."></textarea>
+    </div>
 
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+    <div class="grid" id="outputGrid"></div>
 
-  const particlesArray = [];
-  const particleCount = 120;
+    <div id="toast" class="toast">COPIADO AL PORTAPAPELES 🚀</div>
 
-  window.addEventListener("resize", () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  });
+    <script>
+        const input = document.getElementById('mainInput');
+        const grid = document.getElementById('outputGrid');
+        const toast = document.getElementById('toast');
 
-  class Particle {
-    constructor() {
-      this.x = Math.random() * canvas.width;
-      this.y = Math.random() * canvas.height;
-      this.radius = Math.random() * 2 + 1;
-      this.speedX = (Math.random() - 0.5) * 1.2;
-      this.speedY = (Math.random() - 0.5) * 1.2;
-    }
+        // Los caracteres Unicode deben tratarse como arrays para no romper los pares subrogados
+        const styles = {
+            "NULLX Bold (Sans)": "𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵",
+            "Gótico Bold": "𝖆𝖇𝖈𝖉𝖊𝖋𝖌𝖍𝖎𝖏𝖐𝖑𝖒𝖓𝖔𝖕𝖖𝖗𝖘𝖙𝖚𝖛𝖜𝖝𝖞𝖟𝕬𝕭𝕮𝕯𝕰𝕱𝕲𝕳𝕴𝕵𝕶𝕷𝕸𝕹𝕺𝕻𝕼𝕽𝕾𝕿𝖀𝖁𝖂𝖃𝖄𝖅",
+            "Script Elegante": "𝒶𝒷𝒸𝒹𝑒𝒻𝑔𝒽𝒾𝒿𝓀𝓁𝓂𝓃𝑜𝓅𝓆𝓇𝓈𝓉𝓊𝓋𝓌𝓍𝓎𝓏𝒜ℬ𝒞𝒟ℰℱ𝒢ℋℐ𝒥𝒦ℒℳ𝒩𝒪𝒫𝒬ℛ𝒮𝒯𝒰𝒱𝒲𝒳𝒴𝒵",
+            "Burbujas": "ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩⒶⒷⒸⒹⒺⒻⒼⒽⒾⒿⓀⓁⓂⓃⓄⓅⓆⓇⓈⓉⓊⓋⓌⓍⓎⓏ",
+            "Burbujas Negras": "🅐🅑🅒🅓🅔🅕🅖🅗🅘🅙🅚🅛🅜🅝🅞🅟🅠🅡🅢🅣🅤🅥🅦🅧🅨🅩🅐🅑🅒🅓🅔🅕🅖🅗🅘🅙🅚🅛🅜🅝🅞🅟🅠🅡🅢🅣🅤🅥🅦🅧🅨🅩",
+            "Cuadrados": "🄰🄱🄲🄳🄴🄵🄶🄷🄸🄹🄺🄻🄼🄽🄾🄿🅀🅁🅂🅃🅄🅅🅆🅇🅈🅉🄰🄱🄲🄳🄴🄵🄶🄷🄸🄹🄺🄻🄼🄽🄾🄿🅀🅁🅂🅃🅄🅅🅆🅇🅈🅉",
+            "Mono Espaciado": "𝚊𝚋𝚌𝚍𝚎𝚏𝚐𝚑𝚒𝚓𝚔𝚕𝚖𝚗𝚘𝚙𝚚𝚛𝚜𝚝𝚞𝚟𝚠𝚡𝚢𝚣𝙰𝙱𝙲𝙳𝙴𝙵𝙶𝙷𝙸𝙹𝙺𝙻𝙼𝙽𝙾𝙿𝚀𝚁𝚂𝚃𝚄比𝚅𝚆𝚇𝚈𝚉",
+            "Estilo Máquina": "𝚚𝚠𝚎𝚛𝚝𝚢𝚞𝚒𝚘𝚙𝚊𝚜𝚍𝚏𝚐𝚑𝚓𝚔𝚕𝚣𝚡𝚌𝚟𝚋𝚗𝚖𝚀𝚆𝙴𝚁𝚃𝚈𝚄𝙸𝙾𝙿𝙰𝚂𝙳𝙵𝙶𝙷𝙹𝙺𝙻𝚉𝚇𝙲𝚅𝙱𝙽𝙼"
+        };
 
-    update() {
-      this.x += this.speedX;
-      this.y += this.speedY;
+        const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-      if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
-      if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
-    }
+        function convert(text, styleString) {
+            // Convertimos el string de la fuente en un Array de caracteres Unicode reales
+            const styleArray = Array.from(styleString);
+            let result = "";
 
-    draw() {
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-      ctx.fillStyle = "black";
-      ctx.fill();
-    }
-  }
-
-  function init() {
-    particlesArray.length = 0;
-    for (let i = 0; i < particleCount; i++) {
-      particlesArray.push(new Particle());
-    }
-  }
-
-  function connectParticles() {
-    for (let a = 0; a < particlesArray.length; a++) {
-      for (let b = a; b < particlesArray.length; b++) {
-        const dx = particlesArray[a].x - particlesArray[b].x;
-        const dy = particlesArray[a].y - particlesArray[b].y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < 120) {
-          ctx.strokeStyle = "rgba(0,0,0,0.15)";
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-          ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
-          ctx.stroke();
+            for (let char of text) {
+                const index = alphabet.indexOf(char);
+                if (index !== -1 && styleArray[index]) {
+                    result += styleArray[index];
+                } else {
+                    result += char;
+                }
+            }
+            return result;
         }
-      }
-    }
-  }
 
-  function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+        function update() {
+            const val = input.value || "NULLX";
+            grid.innerHTML = "";
 
-    particlesArray.forEach(particle => {
-      particle.update();
-      particle.draw();
-    });
+            Object.entries(styles).forEach(([name, chars]) => {
+                const converted = convert(val, chars);
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <span class="label">${name}</span>
+                    <div class="output">${converted}</div>
+                `;
+                card.onclick = () => {
+                    navigator.clipboard.writeText(converted);
+                    showToast();
+                };
+                grid.appendChild(card);
+            });
+        }
 
-    connectParticles();
-    requestAnimationFrame(animate);
-  }
+        function showToast() {
+            toast.style.display = "block";
+            setTimeout(() => { toast.style.display = "none"; }, 1500);
+        }
 
-  init();
-  animate();
-</script>
-
+        input.addEventListener('input', update);
+        update(); // Inicializar con "NULLX"
+    </script>
 </body>
 </html>
